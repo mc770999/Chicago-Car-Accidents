@@ -1,8 +1,12 @@
 import csv
+from time import strptime
+
 import pandas as pd
 from bson import ObjectId
 from pymongo import MongoClient
 from database.connect import *
+from datetime import timedelta, datetime
+
 
 
 # MongoDB connection setup
@@ -12,11 +16,23 @@ def init_mongo(db_name, collection_name):
     collection = db[collection_name]
     return collection
 
-def if_none_o(check):
-    if check is not None:
-        return check
-    return 0
+def if_none_o(value):
+    return value if value is not None else 0
 
+
+def get_week_range(date_str):
+
+    # Convert the string to a datetime object
+    date_format = "%m-%d-%Y"
+    date_obj = datetime.strptime(date_str, date_format)
+
+    # Add the specified number of days
+    new_date = date_obj + timedelta(days=6)
+
+    # Format the new date as a string in the same format
+    new_date_str = new_date.strftime("%d-%m-%Y")
+
+    return new_date_str
 
 def insert_all_collections(csv_file):
     # Read the CSV file into a DataFrame
@@ -24,12 +40,12 @@ def insert_all_collections(csv_file):
 
     # Iterate through each row in the DataFrame
     for index, row in df.iterrows():
-        # Create a document from the row data
-        # import_csv_to_mongo_accidents(row,accident)
-        # upsert_accidents_from_csv_accident_day(row, accident_by_beat_of_occurrence_and_day)
-        # import_csv_to_mongo_accident_month(row, accident_by_beat_of_occurrence_and_month)
-        # import_primary_cause_to_mongo(row, accident_by_beat_of_occurrence_and_primary_cause)
-        import_total_injuries_to_mongo(row, total_injuries)
+        # import_csv_to_mongo_accidents(row,accidents)
+        # upsert_accidents_from_csv_accident_day(row, accident_area_day)
+        # import_csv_to_mongo_accident_month(row, accident_area_month)
+        # import_primary_cause_to_mongo(row, accident_area_cause)
+        # import_total_injuries_to_mongo(row, injuries)
+        upsert_accidents_from_csv_accident_week(row, accident_area_week)
 
 
 def import_csv_to_mongo_accidents(row, collection):
@@ -38,9 +54,9 @@ def import_csv_to_mongo_accidents(row, collection):
         "crash_record_id": row["CRASH_RECORD_ID"],
         "crash_date": pd.to_datetime(row["CRASH_DATE"]),
         "beat_of_occurrence": row["BEAT_OF_OCCURRENCE"],
-        "total_injuries": row["INJURIES_TOTAL"],
-        "fatal_injuries": row["INJURIES_FATAL"],
-        "non_fatal_injuries": row["INJURIES_NON_INCAPACITATING"],
+        "total_injuries": if_none_o(row["INJURIES_TOTAL"]),
+        "fatal_injuries": if_none_o(row["INJURIES_FATAL"]),
+        "non_fatal_injuries": if_none_o(row["INJURIES_NON_INCAPACITATING"]),
         "street_name": row["STREET_NAME"],
         # Add other necessary fields here
     }
@@ -64,7 +80,7 @@ def upsert_accidents_from_csv_accident_day(row, collection):
     beat_of_occurrence = row['BEAT_OF_OCCURRENCE']
 
     # Calculate the sum of accidents (for this example, just a count, you can modify it as needed)
-    sum_accidents = 1  # Assuming each row represents one accident
+    sum_accidents = 1  # Assuming each row represents one accidents
 
     # Create a document for the current row
     accident_record = {
@@ -86,8 +102,39 @@ def upsert_accidents_from_csv_accident_day(row, collection):
         # Insert the new document
         collection.insert_one(accident_record)
 
+def upsert_accidents_from_csv_accident_week(row, collection):
 
-# Function to import accident statistics by beat of occurrence and month from CSV
+    day = pd.to_datetime(row['CRASH_DATE']).strftime('%m-%d-%Y')  # Format as needed
+    beat_of_occurrence = row['BEAT_OF_OCCURRENCE']
+
+    # Calculate the sum of accidents (for this example, just a count, you can modify it as needed)
+    sum_accidents = 1  # Assuming each row represents one accidents
+    print(day)
+    # Create a document for the current row
+    accident_record = {
+        "start_day": day,
+        "end_day" :  get_week_range(day),
+        "beat_of_occurrence": beat_of_occurrence,
+        "sum_accidents": sum_accidents
+    }
+
+    # Check if the document already exists by beat_of_occurrence and month
+    existing_record = collection.find_one({
+        "beat_of_occurrence": accident_record["beat_of_occurrence"],
+        "start_day": {"$gte" : day},
+        "end_day" : {"$lte" : day}
+    })
+
+    if existing_record:
+        # Update the existing document
+        collection.update_one({"_id": existing_record["_id"]}, {"$inc": {"sum_accidents": 1}})
+    else:
+        # Insert the new document
+        collection.insert_one(accident_record)
+
+
+
+# Function to import accidents statistics by beat of occurrence and month from CSV
 def import_csv_to_mongo_accident_month(row, collection):
     # Extract necessary fields
     beat_of_occurrence = row['BEAT_OF_OCCURRENCE']
@@ -118,7 +165,7 @@ def import_primary_cause_to_mongo(row, collection):
     sum_accidents = 1
 
     accident_record = {
-        "primary_cause": row["PRIM_CONTRIBUTORY_CAUSE"], # Primary cause of the accident
+        "primary_cause": row["PRIM_CONTRIBUTORY_CAUSE"], # Primary cause of the accidents
         "beat_of_occurrence": row["BEAT_OF_OCCURRENCE"],  # Beat of occurrence
         "sum_accidents": sum_accidents,                # Assuming NUM_UNITS is the number of accidents
         # Add other necessary fields here if required
