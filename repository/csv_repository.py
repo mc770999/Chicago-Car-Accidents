@@ -58,7 +58,6 @@ def import_csv_to_mongo_accidents(row, collection):
 
 
 
-# Function to upsert accident statistics by beat of occurrence and day from CSV
 def upsert_accidents_from_csv_accident_day(row, collection):
 
     day = pd.to_datetime(row['CRASH_DATE']).strftime('%m-%d-%Y')  # Format as needed
