@@ -140,7 +140,7 @@ def import_primary_cause_to_mongo(row, collection):
 
 def import_total_injuries_to_mongo(row, collection):
 
-    sum_accidents = 0
+    sum_accidents = 1
 
     accident_record = {
         "total_injuries": if_none_o(row["INJURIES_TOTAL"]),
