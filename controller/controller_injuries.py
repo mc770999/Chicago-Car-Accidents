@@ -64,7 +64,6 @@ def find_accident_area_and_month(area,cause):
     return response_format(accidents)  # Same here, response_format will handle it
 
 
-
 @blueprint.route('/area_and_month/<string:area>/<string:month>', methods=['GET'])
 def find_accident_area_and_cause(area,month):
     accidents = repo_area_month.find_accidents_by_area_and_month(area,month)
