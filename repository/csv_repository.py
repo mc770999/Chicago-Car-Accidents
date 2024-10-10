@@ -94,7 +94,6 @@ def import_csv_to_mongo_accident_month(row, collection):
     beat_of_occurrence = row['BEAT_OF_OCCURRENCE']
     month = pd.to_datetime(row['CRASH_DATE']).strftime('%m')  # Get month from CRASH_DATE
 
-    # Create the document
     accident_record = {
         "beat_of_occurrence": beat_of_occurrence,
         "month": month,
