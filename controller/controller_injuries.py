@@ -9,6 +9,10 @@ from returns.result import Success, Failure
 import json
 from bson import json_util
 
+from database.connect import accidents
+from repository.csv_repository import insert_all_collections
+
+
 def parse_json(data):
     return json.loads(json_util.dumps(data))
 
@@ -24,8 +28,9 @@ blueprint = Blueprint('blueprint', __name__)
 # Find injuries by id
 @blueprint.route('/injuries/<string:id>', methods=['GET'])
 def find_injuries_by_id(id):
-    injuries = repo_injuries.find_injuries_by_id(id)
-    return response_format(injuries)  # No need for extra checks, response_format will handle Success or Failure
+    injuries = repo_injuries.find_injuries_by_area(id)
+    injuries.unwrap()["list_of_accident_info"] = [accidents.find_one({"crash_record_id": i}) for i in injuries.unwrap()["list_of_accident_info"]]
+    return response_format(Success(injuries))  # No need for extra checks, response_format will handle Success or Failure
 
 # Find all injuries
 @blueprint.route('/injuries/', methods=['GET'])
@@ -76,6 +81,14 @@ def find_accident_area_week(area,month):
     accidents = repo_area_week.find_accidents_by_area_and_week(area,month)
     print(accidents.unwrap())
     return response_format(accidents)  # Same here, response_format will handle it
+
+
+
+
+@blueprint.route('/init_db/', methods=['POST'])
+def init_data():
+    insert_all_collections("../data/data.csv")
+    return jsonify({"success": True, "message": "init success"}), 201
 
 
 

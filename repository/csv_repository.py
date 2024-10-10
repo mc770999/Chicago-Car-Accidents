@@ -40,11 +40,11 @@ def insert_all_collections(csv_file):
 
     # Iterate through each row in the DataFrame
     for index, row in df.iterrows():
-        # import_csv_to_mongo_accidents(row,accidents)
-        # upsert_accidents_from_csv_accident_day(row, accident_area_day)
-        # import_csv_to_mongo_accident_month(row, accident_area_month)
-        # import_primary_cause_to_mongo(row, accident_area_cause)
-        # import_total_injuries_to_mongo(row, injuries)
+        import_csv_to_mongo_accidents(row,accidents)
+        upsert_accidents_from_csv_accident_day(row, accident_area_day)
+        import_csv_to_mongo_accident_month(row, accident_area_month)
+        import_primary_cause_to_mongo(row, accident_area_cause)
+        import_total_injuries_to_mongo(row, injuries)
         upsert_accidents_from_csv_accident_week(row, accident_area_week)
 
 
@@ -220,6 +220,10 @@ def import_total_injuries_to_mongo(row, collection):
     else:
         # Insert the new document
         collection.insert_one(accident_record)
+
+def create_indexes():
+    
+
 
 insert_all_collections("../data/data.csv")
 
